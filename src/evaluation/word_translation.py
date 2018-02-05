@@ -88,9 +88,9 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path)
 
 
-def get_syncon_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, method)):
-    path = os.path.join(DIC_EVAL_PATH, '%s-%s.syncon.txt' % (lang1, lang2))
-    return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, dict_sep='\t')
+def get_syncon_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, method):
+    path = os.path.join(DIC_EVAL_PATH, '%s-%s.syncon-last-5k.txt' % (lang1, lang2))
+    return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path)
 
 
 def _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, dict_sep=None):

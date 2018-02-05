@@ -232,6 +232,9 @@ class Trainer(object):
         Reload the best mapping.
         """
         path = os.path.join(self.params.exp_path, 'best_mapping.t7')
+        self.reload_best_from(path)
+
+    def reload_best_from(self, path):
         logger.info('* Reloading the best model from %s ...' % path)
         # reload the model
         assert os.path.isfile(path)

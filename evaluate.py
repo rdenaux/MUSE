@@ -34,6 +34,8 @@ parser.add_argument("--tgt_emb_vocab", type=str, default="", help="target embedd
 parser.add_argument("--max_vocab", type=int, default=200000, help="Maximum vocabulary size")
 parser.add_argument("--emb_dim", type=int, default=300, help="Embedding dimension")
 parser.add_argument("--normalize_embeddings", type=str, default="", help="Normalize embeddings before training")
+# reload pre-trained mapping
+parser.add_argument("--mapping", type=str, default="", help="Reload pre-trained mapping")
 
 
 # parse parameters
@@ -48,6 +50,7 @@ assert not params.tgt_lang or os.path.isfile(params.tgt_emb)
 logger = initialize_exp(params)
 src_emb, tgt_emb, mapping, _ = build_model(params, False)
 trainer = Trainer(src_emb, tgt_emb, mapping, None, params)
+trainer.reload_best_from(params.mapping)
 evaluator = Evaluator(trainer)
 
 # run evaluations

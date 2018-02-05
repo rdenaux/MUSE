@@ -307,10 +307,10 @@ def load_external_embeddings(params, source):
                 else:
                     word, vect = line.rstrip().split(sep, 1)
                     vect = np.fromstring(vect, sep=sep)
+                    assert word not in word2id
+                    assert vect.shape == (_emb_dim_file,), '%i:%s %s' % (i, word, vect.shape)
                     if np.linalg.norm(vect) == 0:  # avoid to have null embeddings
                         vect[0] = 0.01
-                    assert word not in word2id
-                    assert vect.shape == (_emb_dim_file,), i
                     word2id[word] = len(word2id)
                     vectors.append(vect[None])
                 if params.max_vocab > 0 and i >= params.max_vocab:
