@@ -290,8 +290,8 @@ def load_external_embeddings(params, source):
                     assert vect.shape == (_emb_dim_file,), i
                     word2id[word] = len(word2id)
                     vectors.append(vect[None])
-                if params.max_vocab > 0 and i >= params.max_vocab:
-                    break
+                    if params.max_vocab > 0 and i >= params.max_vocab:
+                        break
     else:
         with open(emb_path) as f:
             for i, line in enumerate(f):
