@@ -44,7 +44,11 @@ parser.add_argument("--dico_min_size", type=int, default=0, help="Minimum genera
 parser.add_argument("--dico_max_size", type=int, default=0, help="Maximum generated dictionary size (0 to disable)")
 # reload pre-trained embeddings
 parser.add_argument("--src_emb", type=str, default='', help="Reload source embeddings")
+parser.add_argument("--src_emb_sep", type=str, default=" ", help="source embeddings separator")
+parser.add_argument("--src_emb_vocab", type=str, default="", help="source embeddings vocab file, if src_emb is a .bin file")
 parser.add_argument("--tgt_emb", type=str, default='', help="Reload target embeddings")
+parser.add_argument("--tgt_emb_sep", type=str, default=" ", help="Target embeddings separator")
+parser.add_argument("--tgt_emb_vocab", type=str, default="", help="target embeddings vocab file, if tgt_emb is a .bin file")
 parser.add_argument("--normalize_embeddings", type=str, default="", help="Normalize embeddings before training")
 
 
