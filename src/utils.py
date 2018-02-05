@@ -283,6 +283,7 @@ def load_external_embeddings(params, source):
         fmt = struct.Struct('%df' % _emb_dim_file)
         with open(emb_path, 'rb') as binf:
             with codecs.open(voc_path,'r',encoding='utf-8') as vocab:
+                i = 0
                 for data, token in zip(iter(partial(binf.read, _emb_dim_file*4), ''), vocab):
                     word = token.strip('\n')
                     vect = np.asarray(fmt.unpack(data))
@@ -290,6 +291,7 @@ def load_external_embeddings(params, source):
                     assert vect.shape == (_emb_dim_file,), i
                     word2id[word] = len(word2id)
                     vectors.append(vect[None])
+                    i = i + 1
                     if params.max_vocab > 0 and i >= params.max_vocab:
                         break
     else:
