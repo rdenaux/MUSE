@@ -40,7 +40,7 @@ def load_identical_char_dico(word2id1, word2id2):
     return dico
 
 
-def load_dictionary(path, word2id1, word2id2):
+def load_dictionary(path, word2id1, word2id2, sep=None):
     """
     Return a torch tensor of size (n, 2) where n is the size of the
     loader dictionary, and sort it by source word frequency.
@@ -55,7 +55,7 @@ def load_dictionary(path, word2id1, word2id2):
     with open(path, 'r') as f:
         for _, line in enumerate(f):
             assert line == line.lower()
-            word1, word2 = line.rstrip().split()
+            word1, word2 = line.rstrip().split(sep=sep)
             if word1 in word2id1 and word2 in word2id2:
                 pairs.append((word1, word2))
             else:
@@ -85,7 +85,16 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
     evaluate the translation accuracy using the precision@k.
     """
     path = os.path.join(DIC_EVAL_PATH, '%s-%s.5000-6500.txt' % (lang1, lang2))
-    dico = load_dictionary(path, word2id1, word2id2)
+    return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path)
+
+
+def get_syncon_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, method)):
+    path = os.path.join(DIC_EVAL_PATH, '%s-%s.syncon.txt' % (lang1, lang2))
+    return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, dict_sep='\t')
+
+
+def _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, dict_sep=None):
+    dico = load_dictionary(path, word2id1, word2id2, sep=dict_sep)
     dico = dico.cuda() if emb1.is_cuda else dico
 
     assert dico[:, 0].max() < emb1.size(0)

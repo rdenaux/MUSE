@@ -57,4 +57,5 @@ if params.tgt_lang:
     evaluator.crosslingual_wordsim(to_log)
     evaluator.word_translation(to_log)
     evaluator.sent_translation(to_log)
+    evaluator.syncon_translation(to_log)
     # evaluator.dist_mean_cosine(to_log)

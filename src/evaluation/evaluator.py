@@ -95,6 +95,22 @@ class Evaluator(object):
             )
             to_log.update([('%s-%s' % (k, method), v) for k, v in results])
 
+    def syncon_translation(self, to_log):
+        """
+        Evaluation on syncon translation.
+        """
+        # mapped word embeddings
+        src_emb = self.mapping(self.src_emb.weight).data
+        tgt_emb = self.tgt_emb.weight.data
+
+        for method in ['nn', 'csls_knn_10']:
+            results = get_syncon_translation_accuracy(
+                self.src_dico.lang, self.src_dico.word2id, src_emb,
+                self.tgt_dico.lang, self.tgt_dico.word2id, tgt_emb,
+                method=method
+            )
+            to_log.update([('%s-%s' % (k, method), v) for k, v in results])
+
     def sent_translation(self, to_log):
         """
         Evaluation on sentence translation.
