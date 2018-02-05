@@ -287,7 +287,7 @@ def load_external_embeddings(params, source):
                 for data, token in zip(iter(partial(binf.read, _emb_dim_file*4), ''), vocab):
                     word = token.strip('\n')
                     vect = np.asarray(fmt.unpack(data))
-                    assert word not in word2id
+                    assert word not in word2id, '%s already in vocab' % word
                     assert vect.shape == (_emb_dim_file,), i
                     word2id[word] = len(word2id)
                     vectors.append(vect[None])
