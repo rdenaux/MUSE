@@ -17,9 +17,11 @@ import numpy as np
 import torch
 from torch import optim
 from logging import getLogger
-
 from .logger import create_logger
 from .dictionary import Dictionary
+from functools import partial
+import codecs
+import struct
 
 
 MAIN_DUMP_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'dumped')
@@ -274,24 +276,40 @@ def load_external_embeddings(params, source):
     # load pretrained embeddings
     lang = params.src_lang if source else params.tgt_lang
     emb_path = params.src_emb if source else params.tgt_emb
+    sep = params.src_emb_sep if source else params.tgt_emb_sep
     _emb_dim_file = params.emb_dim
-    with open(emb_path) as f:
-        for i, line in enumerate(f):
-            if i == 0:
-                split = line.split()
-                assert len(split) == 2
-                assert _emb_dim_file == int(split[1])
-            else:
-                word, vect = line.rstrip().split(' ', 1)
-                vect = np.fromstring(vect, sep=' ')
-                if np.linalg.norm(vect) == 0:  # avoid to have null embeddings
-                    vect[0] = 0.01
-                assert word not in word2id
-                assert vect.shape == (_emb_dim_file,), i
-                word2id[word] = len(word2id)
-                vectors.append(vect[None])
-            if params.max_vocab > 0 and i >= params.max_vocab:
-                break
+    if emb_path.endswith('.bin'):
+        voc_path = params.src_vocab if source else params.tgt_vocab
+        fmt = struct.Struct('%df' % _emb_dim_file)
+        with open(emb_path, 'rb') as binf:
+            with codecs.open(voc_path,'r',encoding='utf-8') as vocab:
+                for data, token in zip(iter(partial(binf.read, _emb_dim_file*4), ''), vocab):
+                    word = token.strip('\n')
+                    vect = fmt.unpack(data)
+                    assert word not in word2id
+                    assert vect.shape == (_emb_dim_file,), i
+                    word2id[word] = len(word2id)
+                    vectors.append(vect[None])
+                if params.max_vocab > 0 and i >= params.max_vocab:
+                    break
+    else:
+        with open(emb_path) as f:
+            for i, line in enumerate(f):
+                if i == 0 and emb_path.endswith('.vec'):
+                    split = line.split()
+                    assert len(split) == 2
+                    assert _emb_dim_file == int(split[1])
+                else:
+                    word, vect = line.rstrip().split(sep, 1)
+                    vect = np.fromstring(vect, sep=sep)
+                    if np.linalg.norm(vect) == 0:  # avoid to have null embeddings
+                        vect[0] = 0.01
+                    assert word not in word2id
+                    assert vect.shape == (_emb_dim_file,), i
+                    word2id[word] = len(word2id)
+                    vectors.append(vect[None])
+                if params.max_vocab > 0 and i >= params.max_vocab:
+                    break
 
     logger.info("Loaded %i pre-trained word embeddings" % len(vectors))
 
