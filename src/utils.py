@@ -279,7 +279,7 @@ def load_external_embeddings(params, source):
     sep = params.src_emb_sep if source else params.tgt_emb_sep
     _emb_dim_file = params.emb_dim
     if emb_path.endswith('.bin'):
-        voc_path = params.src_vocab if source else params.tgt_vocab
+        voc_path = params.src_emb_vocab if source else params.tgt_emb_vocab
         fmt = struct.Struct('%df' % _emb_dim_file)
         with open(emb_path, 'rb') as binf:
             with codecs.open(voc_path,'r',encoding='utf-8') as vocab:
