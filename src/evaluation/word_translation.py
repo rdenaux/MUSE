@@ -9,6 +9,7 @@ import os
 from logging import getLogger
 import numpy as np
 import torch
+import re
 
 from ..utils import get_nn_avg_dist
 
@@ -97,13 +98,28 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
 
 
 def get_syncon_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, method):
-    path = os.path.join(DIC_EVAL_PATH, '%s-%s.syncon-test.txt' % (lang1, lang2))
-    return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, label='syncon')
-
+    syn_tests = [f for f in os.listdir(os.path.join(DIC_EVAL_PATH))
+                 if re.match(r'%s-%s\.syn-test.*\.txt' % (lang1, lang2), f)]
+    result = []
+    for f in syn_tests:
+        path = os.path.join(DIC_EVAL_PATH, f)
+        label = f[:-4]
+        result.extend(_get_translation_acc(
+            lang1, word2id1, emb1, lang2, word2id2, emb2,
+            method, path, label=label, dict_sep=':'))
+    return result
 
 def get_lemma_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, method):
-    path = os.path.join(DIC_EVAL_PATH, '%s-%s.lemma-test.txt' % (lang1, lang2))
-    return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, label='lemma', dict_sep='\t')
+    lem_tests = [f for f in os.listdir(os.path.join(DIC_EVAL_PATH))
+                 if re.match(r'%s-%s\.lem-test.*\.txt' % (lang1, lang2), f)]
+    result = []
+    for f in lem_tests:
+        path = os.path.join(DIC_EVAL_PATH, f)
+        label = f[:-4]
+        result.extend(_get_translation_acc(
+            lang1, word2id1, emb1, lang2, word2id2, emb2,
+            method, path, label=label, dict_sep=':'))
+    return result
 
 
 def _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, label=None, dict_sep=None):
