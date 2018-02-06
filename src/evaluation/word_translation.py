@@ -40,7 +40,7 @@ def load_identical_char_dico(word2id1, word2id2):
     return dico
 
 
-def _load_dictionary_pairs(path, word2id11, word2id2, sep=None):
+def _load_dictionary_pairs(path, word2id1, word2id2, sep=None):
     """
     Return a list of word pairs as they appear in the input file at path.
     Pairs in the file which do not appear in the src or tgt vocabularies are 
