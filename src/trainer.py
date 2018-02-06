@@ -131,7 +131,7 @@ class Trainer(object):
 
         return 2 * self.params.batch_size
 
-    def load_training_dico(self, dico_train):
+    def load_training_dico(self, dico_train, sep=None):
         """
         Load training dictionary.
         """
@@ -150,7 +150,7 @@ class Trainer(object):
             )
         # dictionary provided by the user
         else:
-            self.dico = load_dictionary(dico_train, word2id1, word2id2)
+            self.dico = load_dictionary(dico_train, word2id1, word2id2, sep=sep)
 
         # cuda
         if self.params.cuda:
