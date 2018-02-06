@@ -36,6 +36,7 @@ parser.add_argument("--max_vocab", type=int, default=200000, help="Maximum vocab
 parser.add_argument("--n_iters", type=int, default=5, help="Number of iterations")
 # dictionary creation parameters (for refinement)
 parser.add_argument("--dico_train", type=str, default="default", help="Path to training dictionary (default: use identical character strings)")
+parser.add_argument("--dico_train_sep", type=str, default=None, help="String separating source and target words in the training dictionary (assumed to be a space)")
 parser.add_argument("--dico_method", type=str, default='csls_knn_10', help="Method used for dictionary generation (nn/invsm_beta_30/csls_knn_10)")
 parser.add_argument("--dico_build", type=str, default='S2T&T2S', help="S2T,T2S,S2T|T2S,S2T&T2S")
 parser.add_argument("--dico_threshold", type=float, default=0, help="Threshold confidence for dictionary generation")
@@ -72,7 +73,7 @@ evaluator = Evaluator(trainer)
 
 # load a training dictionary. if a dictionary path is not provided, use a default
 # one ("default") or create one based on identical character strings ("identical_char")
-trainer.load_training_dico(params.dico_train)
+trainer.load_training_dico(params.dico_train, sep=params.dico_train_sep)
 
 """
 Learning loop for Procrustes Iterative Refinement

@@ -11,7 +11,7 @@ import numpy as np
 from torch.autograd import Variable
 
 from . import get_wordsim_scores, get_crosslingual_wordsim_scores
-from . import get_word_translation_accuracy, get_syncon_translation_accuracy
+from . import get_word_translation_accuracy, get_syncon_translation_accuracy, get_lemma_translation_accuracy
 from . import load_europarl_data, get_sent_translation_accuracy
 from ..dico_builder import get_candidates, build_dictionary
 from src.utils import get_idf
@@ -79,37 +79,40 @@ class Evaluator(object):
         to_log['ws_crosslingual_scores'] = ws_crosslingual_scores
         to_log.update({'src_tgt_' + k: v for k, v in src_tgt_ws_scores.items()})
 
-    def word_translation(self, to_log):
+    def _x_translation(self, to_log, trans_acc_fn):
         """
-        Evaluation on word translation.
+        Evaluation on some translation accuracy function. See for example, functions
+        get_word_translation_accuracy, get_syncon_translation_accuracy or get_lemma_translation_accuracy
         """
         # mapped word embeddings
         src_emb = self.mapping(self.src_emb.weight).data
         tgt_emb = self.tgt_emb.weight.data
 
         for method in ['nn', 'csls_knn_10']:
-            results = get_word_translation_accuracy(
+            results = trans_acc_fn(
                 self.src_dico.lang, self.src_dico.word2id, src_emb,
                 self.tgt_dico.lang, self.tgt_dico.word2id, tgt_emb,
                 method=method
             )
             to_log.update([('%s-%s' % (k, method), v) for k, v in results])
+
+    def word_translation(self, to_log):
+        """
+        Evaluation on word translation.
+        """
+        self._x_translation(to_log, get_word_translation_accuracy)
+
+    def lemma_translation(self, to_log):
+        """
+        Evaluation on syncon translation.
+        """
+        self._x_translation(to_log, get_lemma_translation_accuracy)
 
     def syncon_translation(self, to_log):
         """
         Evaluation on syncon translation.
         """
-        # mapped word embeddings
-        src_emb = self.mapping(self.src_emb.weight).data
-        tgt_emb = self.tgt_emb.weight.data
-
-        for method in ['nn', 'csls_knn_10']:
-            results = get_syncon_translation_accuracy(
-                self.src_dico.lang, self.src_dico.word2id, src_emb,
-                self.tgt_dico.lang, self.tgt_dico.word2id, tgt_emb,
-                method=method
-            )
-            to_log.update([('%s-%s' % (k, method), v) for k, v in results])
+        self._x_translation(to_log, get_syncon_translation_accuracy)
 
     def sent_translation(self, to_log):
         """
@@ -204,6 +207,8 @@ class Evaluator(object):
         self.monolingual_wordsim(to_log)
         self.crosslingual_wordsim(to_log)
         self.word_translation(to_log)
+        self.syncon_translation(to_log)
+        self.lemma_translation(to_log)
         self.sent_translation(to_log)
         self.dist_mean_cosine(to_log)
 

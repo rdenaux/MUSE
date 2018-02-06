@@ -40,12 +40,13 @@ def load_identical_char_dico(word2id1, word2id2):
     return dico
 
 
-def load_dictionary(path, word2id1, word2id2, sep=None):
+def _load_dictionary_pairs(path, word2id11, word2id2, sep=None):
     """
-    Return a torch tensor of size (n, 2) where n is the size of the
-    loader dictionary, and sort it by source word frequency.
+    Return a list of word pairs as they appear in the input file at path.
+    Pairs in the file which do not appear in the src or tgt vocabularies are 
+    removed, but logged.
     """
-    assert os.path.isfile(path)
+    assert os.path.isfile(path), 'path is not a file'
 
     pairs = []
     not_found = 0
@@ -54,7 +55,7 @@ def load_dictionary(path, word2id1, word2id2, sep=None):
 
     with open(path, 'r') as f:
         for _, line in enumerate(f):
-            assert line == line.lower()
+            # assert line == line.lower()
             word1, word2 = line.rstrip().split(sep=sep)
             if word1 in word2id1 and word2 in word2id2:
                 pairs.append((word1, word2))
@@ -63,12 +64,19 @@ def load_dictionary(path, word2id1, word2id2, sep=None):
                 not_found1 += int(word1 not in word2id1)
                 not_found2 += int(word2 not in word2id2)
 
-    logger.info("Found %i pairs of words in the dictionary (%i unique). "
+    logger.info("Found %i pairs of words in the dictionary %s (%i unique). "
                 "%i other pairs contained at least one unknown word "
                 "(%i in lang1, %i in lang2)"
-                % (len(pairs), len(set([x for x, _ in pairs])),
+                % (len(pairs), path, len(set([x for x, _ in pairs])),
                    not_found, not_found1, not_found2))
+    return pairs
 
+def load_dictionary(path, word2id1, word2id2, sep=None):
+    """
+    Return a torch tensor of size (n, 2) where n is the size of the
+    loader dictionary, and sort it by source word frequency.
+    """
+    pairs = _load_dictionary_pairs(path, word2id1, word2id2, sep=sep)
     # sort the dictionary by source word frequencies
     pairs = sorted(pairs, key=lambda x: word2id1[x[0]])
     dico = torch.LongTensor(len(pairs), 2)
@@ -89,12 +97,23 @@ def get_word_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, 
 
 
 def get_syncon_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, method):
-    path = os.path.join(DIC_EVAL_PATH, '%s-%s.syncon-last-5k.txt' % (lang1, lang2))
-    return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path)
+    path = os.path.join(DIC_EVAL_PATH, '%s-%s.syncon-test.txt' % (lang1, lang2))
+    return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, label='syncon')
 
 
-def _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, dict_sep=None):
-    dico = load_dictionary(path, word2id1, word2id2, sep=dict_sep)
+def get_lemma_translation_accuracy(lang1, word2id1, emb1, lang2, word2id2, emb2, method):
+    path = os.path.join(DIC_EVAL_PATH, '%s-%s.lemma-test.txt' % (lang1, lang2))
+    return _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, label='lemma', dict_sep='\t')
+
+
+def _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, path, label=None, dict_sep=None):
+    try:
+        dico = load_dictionary(path, word2id1, word2id2, sep=dict_sep)
+    except AssertionError as e:
+        msg = 'Error loading translation dictionary %s: %s ' % (path, e)
+        logger.error(msg)
+        return [msg]
+
     dico = dico.cuda() if emb1.is_cuda else dico
 
     assert dico[:, 0].max() < emb1.size(0)
@@ -153,6 +172,7 @@ def _get_translation_acc(lang1, word2id1, emb1, lang2, word2id2, emb2, method, p
         precision_at_k = 100 * np.mean(list(matching.values()))
         logger.info("%i source words - %s - Precision at k = %i: %f" %
                     (len(matching), method, k, precision_at_k))
-        results.append(('precision_at_%i' % k, precision_at_k))
+        prefix = '%s_' % label if label else ''
+        results.append(('%sprecision_at_%i' % (prefix, k), precision_at_k))
 
     return results
