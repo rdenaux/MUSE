@@ -64,6 +64,9 @@ class Trainer(object):
         ds_size = self.dico.shape[0] if mf == 0 else mf
         src_emb = self.src_emb(Variable(self.dico[:ds_size, 0], volatile=True))
         tgt_emb = self.tgt_emb(Variable(self.dico[:ds_size, 1], volatile=True))
+        if self.params.cuda:
+            src_emb = src_emb.cuda()
+            tgt_emb = tgt_emb.cuda()
         return src_emb, tgt_emb
 
     def get_map_train_loader(self):
@@ -164,6 +167,7 @@ class Trainer(object):
         """
         criterion = torch.nn.CosineEmbeddingLoss()
         loader = self.get_map_train_loader()
+        self.map_optimizer.zero_grad()
         for i, data in enumerate(loader, 0):
             src_embs, tgt_embs = data
             if self.params.cuda:
