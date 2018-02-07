@@ -115,7 +115,7 @@ else:
         for n_epoch in range(params.epochs_per_iter):
             logger.info('Iter %i epoch %i... ' % (n_iter, n_epoch))
 
-            trainer.train_mapping_epoch()
+            trainer.train_mapping_epoch_from_dico()
         evaluate_and_save()
 
 # export embeddings to a text format

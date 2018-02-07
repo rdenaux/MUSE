@@ -7,6 +7,7 @@
 
 import os
 from logging import getLogger
+import numpy as np
 import scipy
 import scipy.linalg
 import torch
@@ -181,6 +182,35 @@ class Trainer(object):
             self.map_optimizer.step()
             if i % 100 == 0:
                 logger.info("Step %i with loss %d" % (i, loss))
+
+    def train_mapping_epoch_from_dico(self):
+        criterion = torch.nn.CosineEmbeddingLoss()
+        self.map_optimizer.zero_grad()
+        mf = self.params.map_most_frequent
+        assert mf <= self.dico.shape[0]
+        ds_size = self.dico.shape[0] if mf == 0 else mf
+        perm = np.random.permute(ds_size)
+        bs = self.params.map_batch_size
+        cnt = 0
+        for s in range(0, ds_size, bs):
+            bis = perm[s:s+bs]
+            src_ids = self.dico[bis, 0]
+            tgt_ids = self.dico[bis, 1]
+            if self.params.cuda:
+                src_ids = src_ids.cuda()
+                tgt_ids = tgt_ids.cuda()
+
+            src_embs = self.src_emb(Variable(src_ids, volatile=True))
+            tgt_embs = self.tgt_emb(Variable(tgt_ids, volatile=True))
+            if self.params.cuda:
+                src_embs, tgt_embs = src_embs.cuda(), tgt_embs.cuda()
+            outputs = self.mapping(src_embs)
+            loss = criterion(outputs, tgt_embs)
+            loss.backward()
+            self.map_optimizer.step()
+            if cnt % 100 == 0:
+                logger.info("Step %i with loss %d" % (cnt, loss))
+            cnt = cnt + 1
 
     def load_training_dico(self, dico_train, sep=None):
         """
