@@ -62,11 +62,14 @@ class Trainer(object):
         mf = self.params.map_most_frequent
         assert mf <= self.dico.shape[0]
         ds_size = self.dico.shape[0] if mf == 0 else mf
-        src_emb = self.src_emb(Variable(self.dico[:ds_size, 0], volatile=True))
-        tgt_emb = self.tgt_emb(Variable(self.dico[:ds_size, 1], volatile=True))
+        src_ids = self.dico[:ds_size, 0]
+        tgt_ids = self.dico[:ds_size, 1]
         if self.params.cuda:
-            src_emb = src_emb.cuda()
-            tgt_emb = tgt_emb.cuda()
+            src_ids = src_ids.cuda()
+            tgt_ids = tgt_ids.cuda()
+
+        src_emb = self.src_emb(Variable(src_ids, volatile=True))
+        tgt_emb = self.tgt_emb(Variable(tgt_ids, volatile=True))
         return src_emb, tgt_emb
 
     def get_map_train_loader(self):
