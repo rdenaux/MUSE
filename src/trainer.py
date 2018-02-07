@@ -53,6 +53,7 @@ class Trainer(object):
         self.best_valid_metric = -1e12
 
         self.decrease_lr = False
+        self.map_trainloader = None
 
     def _get_map_xy(self):
         """
@@ -157,7 +158,7 @@ class Trainer(object):
 
         return 2 * self.params.batch_size
 
-    def train_mapping_epoch(self, stats):
+    def train_mapping_epoch(self):
         """
         Train mapping (non-adversarially)
         """
