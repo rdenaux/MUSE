@@ -10,6 +10,9 @@ from logging import getLogger
 import scipy
 import scipy.linalg
 import torch
+from torch.utils.data.dataset import TensorDataset
+from torch.utils.data import DataLoader
+from torch.utils.data.sampler import RandomSampler
 from torch.autograd import Variable
 from torch.nn import functional as F
 
@@ -50,6 +53,29 @@ class Trainer(object):
         self.best_valid_metric = -1e12
 
         self.decrease_lr = False
+
+    def _get_map_xy(self):
+        """
+        Get the training dictionary as input / output targets
+        """
+        mf = self.params.map_most_frequent
+        assert mf <= self.dico.shape[0]
+        ds_size = self.dico.shape[0] if mf == 0 else mf
+        src_emb = self.src_emb(Variable(self.dico[:ds_size, 0], volatile=True))
+        tgt_emb = self.tgt_emb(Variable(self.dico[:ds_size, 1], volatile=True))
+        return src_emb, tgt_emb
+
+    def get_map_train_loader(self):
+        if self.map_trainloader:
+            return self.map_trainloader
+        x, y = self._get_map_xy()
+        tds = TensorDataset(x, y)
+        self.map_trainloader = DataLoader(
+            tds,
+            batch_size=self.params.map_batch_size,
+            sampler=RandomSampler(tds),
+            num_workers=2)
+        return self.map_trainloader
 
     def get_dis_xy(self, volatile):
         """
@@ -130,6 +156,23 @@ class Trainer(object):
         self.orthogonalize()
 
         return 2 * self.params.batch_size
+
+    def train_mapping_epoch(self, stats):
+        """
+        Train mapping (non-adversarially)
+        """
+        criterion = torch.nn.CosineEmbeddingLoss()
+        loader = self.get_map_train_loader()
+        for i, data in enumerate(loader, 0):
+            src_embs, tgt_embs = data
+            if self.params.cuda:
+                src_embs, tgt_embs = src_embs.cuda(), tgt_embs.cuda()
+            outputs = self.mapping(src_embs)
+            loss = criterion(outputs, tgt_embs)
+            loss.backward()
+            self.map_optimizer.step()
+            if i % 100 == 0:
+                logger.info("Step %i with loss %d" % (i, loss))
 
     def load_training_dico(self, dico_train, sep=None):
         """

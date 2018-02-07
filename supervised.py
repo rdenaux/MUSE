@@ -33,7 +33,12 @@ parser.add_argument("--tgt_lang", type=str, default='es', help="Target language"
 parser.add_argument("--emb_dim", type=int, default=300, help="Embedding dimension")
 parser.add_argument("--max_vocab", type=int, default=200000, help="Maximum vocabulary size")
 # training refinement
+parsre.add_argument("--align_method", type=str, default="procrustes", help="Alignment method. Available 'procrustes', 'nn2'")
 parser.add_argument("--n_iters", type=int, default=5, help="Number of iterations")
+parser.add_argument("--epochs_per_iter", type=int, default=1, help="Number of epochs to train per iteration for non-procrustes methods")
+parser.add_argument("--map_optimizer", type=str, default="adam,lr=0.001", help="Mapping optimizer for non-procrustes methods")
+parser.add_argument("--map_batch_size", type=int, default=32, help="Mapping training batch size")
+parsr.add_argument("--map_most_frequent", type=int, default=0, help="Specify size of the dataset to use for training. 0 for the whole train dictionary.")
 # dictionary creation parameters (for refinement)
 parser.add_argument("--dico_train", type=str, default="default", help="Path to training dictionary (default: use identical character strings)")
 parser.add_argument("--dico_train_sep", type=str, default=None, help="String separating source and target words in the training dictionary (assumed to be a space)")
@@ -75,21 +80,8 @@ evaluator = Evaluator(trainer)
 # one ("default") or create one based on identical character strings ("identical_char")
 trainer.load_training_dico(params.dico_train, sep=params.dico_train_sep)
 
-"""
-Learning loop for Procrustes Iterative Refinement
-"""
-for n_iter in range(params.n_iters):
 
-    logger.info('Starting refinement iteration %i...' % n_iter)
-
-    # build a dictionary from aligned embeddings (unless
-    # it is the first iteration and we use the init one)
-    if n_iter > 0 or not hasattr(trainer, 'dico'):
-        trainer.build_dictionary()
-
-    # apply the Procrustes solution
-    trainer.procrustes()
-
+def evaluate_and_save():
     # embeddings evaluation
     to_log = OrderedDict({'n_iter': n_iter})
     evaluator.all_eval(to_log)
@@ -99,6 +91,32 @@ for n_iter in range(params.n_iters):
     trainer.save_best(to_log, VALIDATION_METRIC)
     logger.info('End of refinement iteration %i.\n\n' % n_iter)
 
+
+if params.align_method == 'procrustes':
+    """
+    Learning loop for Procrustes Iterative Refinement
+    """
+    for n_iter in range(params.n_iters):
+        logger.info('Starting refinement iteration %i...' % n_iter)
+
+        # build a dictionary from aligned embeddings (unless
+        # it is the first iteration and we use the init one)
+        if n_iter > 0 or not hasattr(trainer, 'dico'):
+            trainer.build_dictionary()
+
+        # apply the Procrustes solution
+        trainer.procrustes()
+        evaluate_and_save()
+else:
+    """
+    Learning loop for standard ML training
+    """
+    for n_iter in range(params.n_iters):
+        for n_epoch in range(params.epochs_per_iter):
+            logger.info('Iter %i epoch %i... ' % (n_iter, n_epoch))
+
+            trainer.train_mapping_epoch()
+        evaluate_and_save()
 
 # export embeddings to a text format
 if params.export:
