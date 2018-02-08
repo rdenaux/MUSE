@@ -93,6 +93,8 @@ def build_model(params, with_dis):
     elif params.align_method == 'nn2':
         hidden_dims = [6500, 6500]
         mapping = NNMapper(params.emb_dim, hidden_dims)
+    else:
+        raise RuntimeError('Invalid align_method %s' % params.align_method)
 
     # discriminator
     discriminator = Discriminator(params) if with_dis else None

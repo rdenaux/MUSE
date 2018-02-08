@@ -318,11 +318,16 @@ class Trainer(object):
             self.best_valid_metric = to_log[metric]
             logger.info('* Best value for "%s": %.5f' % (metric, to_log[metric]))
             # save the mapping
-            W = self.mapping.weight.data.cpu().numpy()
             path = os.path.join(self.params.exp_path, 'best_mapping.t7')
-            logger.info('* Saving the mapping to %s ...' % path)
-            torch.save(W, path)
-
+            if params.align_method == 'procrustes':
+                W = self.mapping.weight.data.cpu().numpy()
+                logger.info('* Saving the mapping to %s ...' % path)
+                torch.save(W, path)
+            elif params.align_method == 'nn2':
+                torch.save(self.mapping.state_dict(), path)
+            else:
+                raise RuntimeError("invalid align_method %s" % params.align_method)
+            
     def reload_best(self):
         """
         Reload the best mapping.
@@ -334,10 +339,13 @@ class Trainer(object):
         logger.info('* Reloading the best model from %s ...' % path)
         # reload the model
         assert os.path.isfile(path)
-        to_reload = torch.from_numpy(torch.load(path))
-        W = self.mapping.weight.data
-        assert to_reload.size() == W.size()
-        W.copy_(to_reload.type_as(W))
+        if params.align_method == 'procrustes':
+            to_reload = torch.from_numpy(torch.load(path))
+            W = self.mapping.weight.data
+            assert to_reload.size() == W.size()
+            W.copy_(to_reload.type_as(W))
+        elif params.align_method == 'nn2':
+            self.mapping.load_state_dict(torch.load(path))
 
     def export(self):
         """
