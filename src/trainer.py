@@ -184,32 +184,45 @@ class Trainer(object):
                 logger.info("Step %i with loss %d" % (i, loss))
 
     def train_mapping_epoch_from_dico(self):
-        criterion = torch.nn.CosineEmbeddingLoss()
+        criterion = torch.nn.CosineEmbeddingLoss(size_average=False)
         self.map_optimizer.zero_grad()
         mf = self.params.map_most_frequent
         assert mf <= self.dico.shape[0]
         ds_size = self.dico.shape[0] if mf == 0 else mf
-        perm = np.random.permute(ds_size)
+        perm = np.random.permutation(ds_size)
         bs = self.params.map_batch_size
         cnt = 0
         for s in range(0, ds_size, bs):
-            bis = perm[s:s+bs]
-            src_ids = self.dico[bis, 0]
-            tgt_ids = self.dico[bis, 1]
+            e = min(len(perm), s+bs)
+            bis = torch.LongTensor(perm[s:e])
+            if self.params.cuda:
+                bis = bis.cuda()
+            dico_batch = self.dico.index_select(0, bis)
+            # logger.info('dico_batch size %s ' % str(dico_batch.size()))
+            src_ids = dico_batch[:, 0]
+            tgt_ids = dico_batch[:, 1]
+            # logger.info('src_ids %s, min %i max %i'% (src_ids.size(), src_ids.min(), src_ids.max()))
+            # all training pairs are positive examples
+            tgts = torch.LongTensor(e-s).fill_(1)
+            # logger.info('tgts size %s' % (tgts.size()))
             if self.params.cuda:
                 src_ids = src_ids.cuda()
                 tgt_ids = tgt_ids.cuda()
+                tgts = tgts.cuda()
 
-            src_embs = self.src_emb(Variable(src_ids, volatile=True))
-            tgt_embs = self.tgt_emb(Variable(tgt_ids, volatile=True))
+            src_embs = self.src_emb(Variable(src_ids, requires_grad=False))
+            tgt_embs = self.tgt_emb(Variable(tgt_ids, requires_grad=False))
             if self.params.cuda:
                 src_embs, tgt_embs = src_embs.cuda(), tgt_embs.cuda()
             outputs = self.mapping(src_embs)
-            loss = criterion(outputs, tgt_embs)
+            #logger.info('outputs %s, expected %s, tgts %s' % (outputs.size(), tgt_embs.size(), tgts.size()))
+            #logger.info('outputs[0,0:3] %s, expected[0,0:3] %s' % (outputs[:2,0:3].data, tgt_embs[:2,0:3].data))
+            loss = criterion(outputs, tgt_embs, Variable(tgts))
+            # logger.info("Step %i with loss %f" % (cnt, loss))
             loss.backward()
             self.map_optimizer.step()
             if cnt % 100 == 0:
-                logger.info("Step %i with loss %d" % (cnt, loss))
+                logger.info("Step %i with loss %f" % (cnt, loss))
             cnt = cnt + 1
 
     def load_training_dico(self, dico_train, sep=None):
