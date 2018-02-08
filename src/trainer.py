@@ -172,6 +172,7 @@ class Trainer(object):
         criterion = torch.nn.CosineEmbeddingLoss()
         loader = self.get_map_train_loader()
         self.map_optimizer.zero_grad()
+        self.mapping.train(True)
         for i, data in enumerate(loader, 0):
             src_embs, tgt_embs = data
             if self.params.cuda:
@@ -192,6 +193,7 @@ class Trainer(object):
         perm = np.random.permutation(ds_size)
         bs = self.params.map_batch_size
         cnt = 0
+        self.mapping.train(True)
         for s in range(0, ds_size, bs):
             e = min(len(perm), s+bs)
             bis = torch.LongTensor(perm[s:e])

@@ -320,10 +320,15 @@ def load_external_embeddings(params, source):
 
     # compute new vocabulary / embeddings
     id2word = {v: k for k, v in word2id.items()}
+    logger.info("Reversed word2id")
     dico = Dictionary(id2word, word2id, lang)
+    logger.info("Created dico")
     embeddings = np.concatenate(vectors, 0)
+    logger.info("Concatenated vectors")
     embeddings = torch.from_numpy(embeddings).float()
+    logger.info("Converted to torch")
     embeddings = embeddings.cuda() if params.cuda else embeddings
+    logger.info("To cuda")
     assert embeddings.size() == (len(word2id), params.emb_dim), ((len(word2id), params.emb_dim, embeddings.size()))
 
     return dico, embeddings

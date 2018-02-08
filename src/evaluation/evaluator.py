@@ -38,13 +38,18 @@ class Evaluator(object):
     def batch_mapping(self, inputs):
         max_batch_size = 5000
         inputs_size = inputs.size()[0]
+        self.mapping.train(False)
         if inputs_size > max_batch_size:
+            # logger.info('mapping large inputs %i, in batches of %i' % (inputs_size, max_batch_size))
             bos = []
             for s in range(0, inputs_size, max_batch_size):
                 e = min(inputs_size, s + max_batch_size)
+                # logger.info('batch %i to %i' % (s, e))
                 batch = inputs[s:e]
-                bos.append(self.mapping(batch))
-            return torch.stack(bos)
+                bo = self.mapping(batch)
+                # logger.info('batch_output size %s' % str(bo.size()))
+                bos.append(bo.data)
+            return Variable(torch.cat(bos, dim=0))
         else:
             return self.mapping(inputs)
 

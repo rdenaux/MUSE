@@ -28,6 +28,7 @@ def get_candidates(emb1, emb2, params):
     if params.dico_max_rank > 0 and not params.dico_method.startswith('invsm_beta_'):
         n_src = params.dico_max_rank
 
+    logger.info('dico_method %s' % params.dico_method)
     # nearest neighbors
     if params.dico_method == 'nn':
 
@@ -82,10 +83,11 @@ def get_candidates(emb1, emb2, params):
         average_dist2 = torch.from_numpy(get_nn_avg_dist(emb1, emb2, knn))
         average_dist1 = average_dist1.type_as(emb1)
         average_dist2 = average_dist2.type_as(emb2)
+        logger.info('Calculated average dists')
 
         # for every source word
         for i in range(0, n_src, bs):
-
+            # logger.info('calculating scores for batch %i to %i' % (i, i+bs))
             # compute target words scores
             scores = emb2.mm(emb1[i:min(n_src, i + bs)].transpose(0, 1)).transpose(0, 1)
             scores.mul_(2)
@@ -105,23 +107,39 @@ def get_candidates(emb1, emb2, params):
     ], 1)
 
     # sanity check
+    # print('n_src %i ' % n_src)
     assert all_scores.size() == all_pairs.size() == (n_src, 2)
-
+    # print('all_scores.size() %s' % str(all_scores.size()))
+    # logger.info("all_scores.size() %s, ex: %s" % (str(all_scores.size()), all_scores[0]))
+    # logger.info("all_targets ex: %s" % (all_targets[0]))
+    # logger.info("all_pairs ex: %s" % (all_pairs[0]))
     # sort pairs by score confidence
     diff = all_scores[:, 0] - all_scores[:, 1]
     reordered = diff.sort(0, descending=True)[1]
     all_scores = all_scores[reordered]
     all_pairs = all_pairs[reordered]
+    # print('sorted all_scores.size() %s' % str(all_scores.size()))
+    # logger.info("all_scores ex: %s" % (all_scores[0]))
+    # logger.info("all_targets ex: %s" % (all_targets[0]))
+    # logger.info("all_pairs ex: %s" % (all_pairs[0]))
 
     # max dico words rank
     if params.dico_max_rank > 0:
+        max_vals = all_pairs.max(1)[0]
         selected = all_pairs.max(1)[0] <= params.dico_max_rank
-        mask = selected.unsqueeze(1).expand_as(all_scores).clone()
-        all_scores = all_scores.masked_select(mask).view(-1, 2)
-        all_pairs = all_pairs.masked_select(mask).view(-1, 2)
+        # logger.info("selected size %s min %i max %i" % (str(selected.size()), selected.min(), selected.max()))
+        if selected.sum() > 0:
+            mask = selected.unsqueeze(1).expand_as(all_scores).clone()
+            all_scores = all_scores.masked_select(mask).view(-1, 2)
+            all_pairs = all_pairs.masked_select(mask).view(-1, 2)
+        else:
+            logger.info("Ignoring dico_max_rank since all top values (%i, %i) are above threshold %i" % (max_vals.min(), max_vals.max(), params.dico_max_rank))
 
     # max dico size
+    # print('dico_max_size %s' % params.dico_max_size)
     if params.dico_max_size > 0:
+        # print('to filter all_scores.size() %s' % str(all_scores.size()))
+        # print('first scores 5 %s' % all_scores[:5])
         all_scores = all_scores[:params.dico_max_size]
         all_pairs = all_pairs[:params.dico_max_size]
 
