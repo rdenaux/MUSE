@@ -8,6 +8,7 @@
 from logging import getLogger
 from copy import deepcopy
 import numpy as np
+import torch
 from torch.autograd import Variable
 
 from . import get_wordsim_scores, get_crosslingual_wordsim_scores
@@ -34,13 +35,26 @@ class Evaluator(object):
         self.discriminator = trainer.discriminator
         self.params = trainer.params
 
+    def batch_mapping(self, inputs):
+        max_batch_size = 5000
+        inputs_size = inputs.size()[0]
+        if inputs_size > max_batch_size:
+            bos = []
+            for s in range(0, inputs_size, max_batch_size):
+                e = min(inputs_size, s + max_batch_size)
+                batch = inputs[s:e]
+                bos.append(self.mapping(batch))
+            return torch.stack(bos)
+        else:
+            return self.mapping(inputs)
+
     def monolingual_wordsim(self, to_log):
         """
         Evaluation on monolingual word similarity.
         """
         src_ws_scores = get_wordsim_scores(
             self.src_dico.lang, self.src_dico.word2id,
-            self.mapping(self.src_emb.weight).data.cpu().numpy()
+            self.batch_mapping(self.src_emb.weight).data.cpu().numpy()
         )
         tgt_ws_scores = get_wordsim_scores(
             self.tgt_dico.lang, self.tgt_dico.word2id,
@@ -65,7 +79,7 @@ class Evaluator(object):
         """
         Evaluation on cross-lingual word similarity.
         """
-        src_emb = self.mapping(self.src_emb.weight).data.cpu().numpy()
+        src_emb = self.batch_mapping(self.src_emb.weight).data.cpu().numpy()
         tgt_emb = self.tgt_emb.weight.data.cpu().numpy()
         # cross-lingual wordsim evaluation
         src_tgt_ws_scores = get_crosslingual_wordsim_scores(
@@ -85,7 +99,7 @@ class Evaluator(object):
         get_word_translation_accuracy, get_syncon_translation_accuracy or get_lemma_translation_accuracy
         """
         # mapped word embeddings
-        src_emb = self.mapping(self.src_emb.weight).data
+        src_emb = self.batch_mapping(self.src_emb.weight).data
         tgt_emb = self.tgt_emb.weight.data
 
         for method in ['nn', 'csls_knn_10']:
@@ -138,7 +152,7 @@ class Evaluator(object):
             return
 
         # mapped word embeddings
-        src_emb = self.mapping(self.src_emb.weight).data
+        src_emb = self.batch_mapping(self.src_emb.weight).data
         tgt_emb = self.tgt_emb.weight.data
 
         # get idf weights
@@ -171,7 +185,7 @@ class Evaluator(object):
         Mean-cosine model selection criterion.
         """
         # get normalized embeddings
-        src_emb = self.mapping(self.src_emb.weight).data
+        src_emb = self.batch_mapping(self.src_emb.weight).data
         tgt_emb = self.tgt_emb.weight.data
         src_emb = src_emb / src_emb.norm(2, 1, keepdim=True).expand_as(src_emb)
         tgt_emb = tgt_emb / tgt_emb.norm(2, 1, keepdim=True).expand_as(tgt_emb)
