@@ -319,14 +319,14 @@ class Trainer(object):
             logger.info('* Best value for "%s": %.5f' % (metric, to_log[metric]))
             # save the mapping
             path = os.path.join(self.params.exp_path, 'best_mapping.t7')
-            if params.align_method == 'procrustes':
+            if self.params.align_method == 'procrustes':
                 W = self.mapping.weight.data.cpu().numpy()
                 logger.info('* Saving the mapping to %s ...' % path)
                 torch.save(W, path)
-            elif params.align_method == 'nn2':
+            elif self.params.align_method == 'nn2':
                 torch.save(self.mapping.state_dict(), path)
             else:
-                raise RuntimeError("invalid align_method %s" % params.align_method)
+                raise RuntimeError("invalid align_method %s" % self.params.align_method)
 
     def reload_best(self):
         """
@@ -339,13 +339,15 @@ class Trainer(object):
         logger.info('* Reloading the best model from %s ...' % path)
         # reload the model
         assert os.path.isfile(path)
-        if params.align_method == 'procrustes':
+        if self.params.align_method == 'procrustes':
             to_reload = torch.from_numpy(torch.load(path))
             W = self.mapping.weight.data
             assert to_reload.size() == W.size()
             W.copy_(to_reload.type_as(W))
-        elif params.align_method == 'nn2':
+        elif self.params.align_method == 'nn2':
             self.mapping.load_state_dict(torch.load(path))
+        else:
+            raise RuntimeError("invalid align_method %s" % self.params.align_method)
 
     def export(self):
         """
