@@ -114,6 +114,9 @@ class Evaluator(object):
                 method=method
             )
             to_log.update([('%s-%s' % (k, method), v) for k, v in results])
+        logger.info('GPU mem allocated %s cached %s ' %
+                    (torch.cuda.memory_allocated(),
+                     torch.cuda.memory_cached()))
 
     def word_translation(self, to_log):
         """

@@ -327,7 +327,7 @@ class Trainer(object):
                 torch.save(self.mapping.state_dict(), path)
             else:
                 raise RuntimeError("invalid align_method %s" % params.align_method)
-            
+
     def reload_best(self):
         """
         Reload the best mapping.
